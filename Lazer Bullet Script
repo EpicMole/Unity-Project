@@ -1,0 +1,23 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class LazBullet : MonoBehaviour
+{
+    public float BulletSpeed = 10;
+
+    public Rigidbody2D LazBulletRb;
+
+    void Start()
+    {
+        LazBulletRb.velocity = transform.right * BulletSpeed;
+    }
+
+    void OnTriggerEnter2D(Collider2D bulletCollision)
+    {
+        if (bulletCollision.gameObject.tag == "Platform")
+        {
+            Destroy(gameObject);
+        }
+    }
+}
