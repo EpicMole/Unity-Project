@@ -1,0 +1,258 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.InputSystem;
+
+public class Movement : MonoBehaviour
+{
+    private PlayerControls controls;
+
+    public float MovementSpeed = 1;
+    public float JumpForce = 1;
+
+    private Vector2 move;
+    public Vector2 StandingSize;
+    public Vector2 CrouchingSize;
+    public Vector2 CrouchingOffset;
+    public Vector2 StandingOffset;
+
+    public Rigidbody2D rb;
+
+    public SpriteRenderer SpriteRenderer;
+
+    public Sprite Standing;
+    public Sprite Crouching;
+    public Sprite StandingAngleUp;
+
+    public BoxCollider2D Collider;
+
+    public Transform FirePointSH;
+    public Transform FirePointC;
+    public Transform FirePointAngleUp;
+    public Transform FirePointAngleUpC;
+    public Transform FirePointUp;
+    public Transform FirePointDown;
+
+    public GameObject LazBulletPrefab;
+
+    private bool isGrounded;
+    private bool isMoving;
+    private bool isCrouching = false;
+    private bool facingRight = true;
+    private bool AimAtAngleUp = false;
+    private bool aimUp = false;
+    private bool aimDown = false;
+
+    void Awake()
+    {
+        controls = new PlayerControls();
+
+        controls.Gameplay.MoveR.performed += ctx => move = new Vector2(1, 0);
+        controls.Gameplay.MoveR.canceled += ctx => move = Vector2.zero;
+
+        controls.Gameplay.MoveL.performed += ctx => move = new Vector2(-1, 0);
+        controls.Gameplay.MoveL.canceled += ctx => move = Vector2.zero;
+
+        controls.Gameplay.Jump.performed += ctx => Jump();
+
+        controls.Gameplay.Crouch.started += ctx => Crouch();
+        controls.Gameplay.Crouch.canceled += ctx => ReturnToStand();
+
+        controls.Gameplay.Fire.performed += ctx => Fire();
+
+        controls.Gameplay.AimAngleUp.started += ctx => AimAngleUp();
+        controls.Gameplay.AimAngleUp.canceled += ctx => ReturnHorizontalAim();
+        
+        controls.Gameplay.AimUp.started += ctx => AimUp();
+        controls.Gameplay.AimUp.canceled += ctx => ReturnAimFromUp();
+
+        controls.Gameplay.AimDown.started += ctx => AimDown();
+        controls.Gameplay.AimDown.canceled += ctx => ReturnAimFromDown();
+    }
+
+    void Start()
+    {
+        SpriteRenderer = GetComponent<SpriteRenderer>();
+        SpriteRenderer.sprite = Standing;
+
+        StandingSize = Collider.size;
+        StandingOffset = Collider.offset;
+    }
+
+    void Update()
+    {
+        if (move.x > 0 && !facingRight)
+        {
+            Flip();
+        }
+
+        if (move.x < 0 && facingRight)
+        {
+            Flip();
+        }
+
+        if (!isCrouching)
+        {
+            Vector2 m1 = new Vector2(move.x, move.y) * MovementSpeed * Time.deltaTime;
+            transform.Translate(m1, Space.World);
+        }
+
+    }
+
+    void Jump()
+    {
+        if (isGrounded && !isCrouching)
+        {
+            rb.velocity = Vector2.up * JumpForce;
+        }
+    }
+
+    void Crouch()
+    {
+        if (isGrounded)
+        {
+            isCrouching = true;
+
+            SpriteRenderer.sprite = Crouching;
+
+            Collider.size = CrouchingSize;
+
+            Collider.offset = CrouchingOffset;
+        }
+    }
+
+    void ReturnToStand()
+    {
+        if (isGrounded && !AimAtAngleUp)
+        {
+            isCrouching = false;
+
+            SpriteRenderer.sprite = Standing;
+
+            Collider.size = StandingSize;
+
+            Collider.offset = StandingOffset;
+        }
+        if (isGrounded && AimAtAngleUp)
+        {
+            isCrouching = false;
+
+            SpriteRenderer.sprite = StandingAngleUp;
+
+            Collider.size = StandingSize;
+
+            Collider.offset = StandingOffset;
+        }
+    }
+
+    void Fire()
+    {
+        if (aimUp && !AimAtAngleUp && !aimDown)
+        {
+            Instantiate(LazBulletPrefab, FirePointUp.position, FirePointUp.rotation);
+        }
+        if (aimDown && !AimAtAngleUp && !aimUp)
+        {
+            Instantiate(LazBulletPrefab, FirePointDown.position, FirePointDown.rotation);
+        }
+
+        if (!isCrouching && AimAtAngleUp && !aimUp && !aimDown)
+        {
+            Instantiate(LazBulletPrefab, FirePointAngleUp.position, FirePointAngleUp.rotation);
+        }
+        if (isCrouching && AimAtAngleUp && !aimUp && !aimDown)
+        {
+            Instantiate(LazBulletPrefab, FirePointAngleUpC.position, FirePointAngleUpC.rotation);
+        }   
+
+        if (!isCrouching && !AimAtAngleUp && !aimUp && !aimDown)
+        {
+            Instantiate(LazBulletPrefab, FirePointSH.position, FirePointSH.rotation);
+        }
+        if (isCrouching && !AimAtAngleUp && !aimUp && !aimDown)
+        {
+            Instantiate(LazBulletPrefab, FirePointC.position, FirePointC.rotation);
+        }
+    }
+
+    void AimAngleUp()
+    {
+        AimAtAngleUp = true;
+
+        if (!isCrouching)
+        {
+            SpriteRenderer.sprite = StandingAngleUp;
+
+            Collider.size = StandingSize;
+
+            Collider.offset = StandingOffset;
+        }
+    }
+
+    void ReturnHorizontalAim()
+    {
+        AimAtAngleUp = false;
+
+        if (!isCrouching)
+        {
+            SpriteRenderer.sprite = Standing;
+
+            Collider.size = StandingSize;
+
+            Collider.offset = StandingOffset;
+        }
+    }
+
+    void AimUp()
+    {
+        aimUp = true;
+    }
+
+    void ReturnAimFromUp()
+    {
+        aimUp = false;
+    }
+
+    void AimDown()
+    {
+        aimDown = true;
+    }
+
+    void ReturnAimFromDown()
+    {
+        aimDown = false;
+    }
+
+    void Flip()
+    {
+        transform.Rotate(0, 180, 0);
+
+        facingRight = !facingRight;
+    }
+
+    void OnTriggerEnter2D(Collider2D playerCollision)
+    {
+        if (playerCollision.gameObject.tag == "Platform")
+        {
+            isGrounded = true;
+        }
+    }
+
+    void OnTriggerExit2D(Collider2D playerCollision)
+    {
+        if (playerCollision.gameObject.tag == "Platform")
+        {
+            isGrounded = false;
+        }
+    }
+
+    void OnEnable()
+    {
+        controls.Gameplay.Enable();
+    }
+
+    void OnDisable()
+    {
+        controls.Gameplay.Disable();
+    }
+}
